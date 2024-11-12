@@ -9,7 +9,7 @@ Fix FTBFS with GCC-14, https://bugs.debian.org/1075594
  1 file changed, 2 insertions(+)
 
 diff --git a/logo.h b/logo.h
-index 314173f..b07d634 100644
+index 024c6be..967ca0d 100644
 --- a/logo.h
 +++ b/logo.h
 @@ -32,6 +32,8 @@

@@ -1,3 +1,9 @@
+ucblogo (6.2.5rc1-1) UNRELEASED; urgency=medium
+
+  * forward port patches
+
+ -- Barak A. Pearlmutter <bap@debian.org>  Tue, 12 Nov 2024 12:46:15 +0000
+
 ucblogo (6.2.4-2) unstable; urgency=medium
 
   * Patches to:
