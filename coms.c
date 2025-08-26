@@ -34,19 +34,6 @@ extern int check_wx_stop(int force_yield, int pause_return_value);
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
-#ifdef ibm
-#include "process.h"
-#endif
-#ifdef mac
-#include <console.h>
-#include <Events.h>
-#endif
-#ifdef __RZTC__
-#include <time.h>
-#include <controlc.h>
-#include <dos.h>
-#include <msmouse.h>
-#endif
 
 #ifdef HAVE_TERMIO_H
 #ifdef HAVE_WX
@@ -60,7 +47,7 @@ extern int check_wx_stop(int force_yield, int pause_return_value);
 #endif
 #endif
 
-#ifdef __APPLE__
+#ifdef HAVE_GETTIMEOFDAY
 #include <sys/time.h>
 #else
 #include <time.h>
@@ -71,17 +58,8 @@ extern int check_wx_stop(int force_yield, int pause_return_value);
 #endif
 
 NODE *make_cont(enum labels cont, NODE *val) {
-#ifdef __RZTC__
-    union { enum labels lll;
-	    NODE *ppp;} cast;
-#endif
     NODE *retval = cons(NIL, val);
-#ifdef __RZTC__
-    cast.lll = cont;
-    retval->n_car = cast.ppp;
-#else
     retval->n_car = (NODE *)cont;
-#endif
     settype(retval, CONT);
     return retval;
 }
@@ -273,7 +251,7 @@ NODE *pos_int_arg(NODE *args) {
     FLONUM f;
 
     val = cnv_node_to_numnode(arg);
-    while ((nodetype(val) != INT || getint(val) < 0) && NOT_THROWING) {
+    while ((nodetype(val) != INTT || getint(val) < 0) && NOT_THROWING) {
 	if (nodetype(val) == FLOATT &&
 		    fmod((f = getfloat(val)), 1.0) == 0.0 &&
 		    f >= 0.0 && f < (FLONUM)MAXLOGOINT) {
@@ -290,7 +268,7 @@ NODE *pos_int_arg(NODE *args) {
 	val = cnv_node_to_numnode(arg);
     }
     setcar(args,val);
-    if (nodetype(val) == INT) return(val);
+    if (nodetype(val) == INTT) return(val);
     return UNBOUND;
 }
 
@@ -354,25 +332,6 @@ void prepare_to_exit(BOOLEAN okay) {
 	wxLogoExit (0);
 #endif
 
-#ifdef mac
-    if (okay) {
-	console_options.pause_atexit = 0;
-	exit(0);
-    }
-#endif
-
-#ifndef WIN32 /* sowings */
-#ifdef ibm
-    ltextscreen(NIL);
-    ibm_plain_mode();
-#ifdef __RZTC__
-    msm_term();
-    zflush();
-    controlc_close();
-#endif
-#endif
-#endif /* !WIN32 */
-
 #ifdef unix
 #ifndef HAVE_UNISTD_H
     extern int getpid();
@@ -394,9 +353,6 @@ NODE *lbye(NODE *args) {
 	lcleartext(NIL);
     ndprintf(stdout, "%t\n", message_texts[THANK_YOU]);
     ndprintf(stdout, "%t\n", message_texts[NICE_DAY]);
-#ifdef __RZTC__
-    printf("\n");
-#endif
     
 #ifdef HAVE_WX
     wx_leave_mainloop++;
@@ -412,10 +368,6 @@ NODE *lwait(NODE *args) {
     unsigned int n;
 #if defined(unix) && HAVE_USLEEP
 	unsigned int seconds, microseconds;
-#endif
-#ifdef mac
-    long target;
-    extern void ProcessEvent(void);
 #endif
 
     num = pos_int_arg(args);
@@ -436,9 +388,6 @@ NODE *lwait(NODE *args) {
       //fflush(stdout); /* csls v. 1 p. 7 */
 #endif
 
-#if defined(__RZTC__)
-	zflush();
-#endif
 	fix_turtle_shownness();
 
 #ifdef HAVE_WX
@@ -460,22 +409,6 @@ NODE *lwait(NODE *args) {
 	    n = (unsigned int)getint(num) / 60;
 	    sleep(n);
 #endif
-#elif defined(__RZTC__)
-	    usleep(getint(num) * 16667L);
-#elif defined(mac)
-	    target = getint(num)+TickCount();
-	    while (TickCount() < target) {
-		if (check_throwing) break;
-		ProcessEvent();
-	    }
-#elif defined(_MSC_VER)
-	    n = (unsigned int)getint(num);
-	    while (n > 60) {
-		_sleep(1000);
-		n -= 60;
-		if (check_throwing) n = 0;
-	    }
-	    if (n > 0) _sleep(n*1000/60);
 #else	/* unreachable, I think */
 	    if (!setjmp(iblk_buf)) {
 		input_blocking++;
@@ -491,58 +424,6 @@ NODE *lwait(NODE *args) {
 }
 
 NODE *lshell(NODE *args) {
-#if defined(mac)
-    printf("%s\n", message_texts[NOSHELL_MAC]);
-    return(UNBOUND);
-#else    
-#ifdef ibm
-    NODE *arg;
-    char doscmd[200];
-/*  union REGS r;     */
-    char *old_stringptr = print_stringptr;
-    int old_stringlen = print_stringlen;
-
-    arg = car(args);
-    while (!is_list(arg) && NOT_THROWING) {
-	setcar(args, err_logo(BAD_DATA, arg));
-	arg = car(args);
-    }
-    if (arg == NIL) {
-	ndprintf(stdout, "%t\n", message_texts[TYPE_EXIT]);
-	if (spawnlp(P_WAIT, "command", "command", NULL))
-	    err_logo(FILE_ERROR,
-	      make_static_strnode
-		 ("Could not open shell (probably due to low memory)"));
-    }
-    else {
-	print_stringlen = 199;
-	print_stringptr = doscmd;
-	ndprintf((FILE *)NULL,"%p",arg);
-	*print_stringptr = '\0';
-	if (system(doscmd) < 0)
-	    err_logo(FILE_ERROR,
-	      make_static_strnode
-		 ("Could not open shell (probably due to low memory)"));
-	print_stringptr = old_stringptr;
-	print_stringlen = old_stringlen;
-    }
-/*
-    r.h.ah = 0x3;
-    r.h.al = 0;
-    r.h.dh = 0; r.h.dl = 0;
-    int86(0x21, &r, &r);
-    x_coord = x_margin;
-    y_coord = r.h.dh;
- */
-#ifndef WIN32
-    x_coord = x_margin;
-    y_coord = y_max;
-    ibm_gotoxy(x_coord, y_coord);
-#else
-    win32_repaint_screen();
-#endif
-    return(UNBOUND);
-#else
     char cmdbuf[300];
     FILE *strm;
     NODE *head = NIL, *tail = NIL, *this;
@@ -587,14 +468,12 @@ NODE *lshell(NODE *args) {
     pclose(strm);
 #endif
     return(head);
-#endif
-#endif
 }
 
 NODE *ltime(NODE *args) {
     NODE *val;
     FLONUM fval = 0.0;
-#ifdef __APPLE__
+#ifdef HAVE_GETTIMEOFDAY
     struct timeval tp;
 
     gettimeofday(&tp, NULL);

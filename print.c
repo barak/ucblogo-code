@@ -31,19 +31,9 @@ int force_printwidth = -1, force_printdepth = -1;
 int x_margin=0, y_margin=0;
 void real_print_node(FILE *, NODE *, int, int);
 
-#ifdef mac
-BOOLEAN boldmode = 0;
-#endif
-
 void update_coords(char ch) {
     int i;
 
-#ifdef ibm
-#if !defined(__RZTC__) && !defined(_MSC_VER) && !defined(WIN32)
-    check_scroll();
-#endif
-#endif
-	
 #ifdef HAVE_WX
 	int getTermInfo(int type);
 #if 0
@@ -104,36 +94,7 @@ void update_coords(char ch) {
 void print_char(FILE *strm, char ch) {
     if (strm != NULL) {
 	if (interactive && strm==stdout) {
-#ifdef mac
-	    if (boldmode) {
-		if (ch == '\2')
-		    boldmode = 0;
-		else
-		    ch = ch | 0200;		/* Not so good in Europe */
-	    } else if (ch == '\1')
-		boldmode = 1;
-#endif
-#ifdef ibm
-	    if (ch == '\1')
-		ibm_bold_mode();
-	    if (ch == '\2')
-		ibm_plain_mode();
-#if defined(__RZTC__) && !defined(WIN32) /* sowings */
-	    ztc_put_char(ch);
-#elif defined(TURBO_C)
-	    if (in_graphics_mode && ibm_screen_top == 0)
-		lsplitscreen();
-	    if (ch == '\n' || in_graphics_mode)
-		rd_putc(ch, strm);
-	    else if (ch != '\1' && ch != '\2')
-		rd_putc(ch, stdout); /* takes advantage of bold attribute */
-#else /* WIN32 */
-	    if (ch != '\1' && ch != '\2')
-	      rd_putc(ch, strm);
-#endif /* ibm */
-#else /* Unix */
-	    rd_putc(ch, strm);
-#endif
+    rd_putc(ch, strm);
 	} else	    /* printing to stream but not screen */
 	    rd_putc(ch, strm);
 	if (strm == stdout) {
@@ -362,7 +323,7 @@ int find_limit(NODE *nd, int forced) {
     if (forced >= 0) return forced;
     if (nd == NIL) return(-1);
     nd = cnv_node_to_numnode(valnode__caseobj(nd));
-    if (nodetype(nd) == INT) val = getint(nd);
+    if (nodetype(nd) == INTT) val = getint(nd);
     return(val);
 }
 

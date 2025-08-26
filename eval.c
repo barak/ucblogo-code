@@ -714,12 +714,6 @@ fetch_cont:
 
 compound_apply:
     debprint("compound_apply");
-#ifdef mac
-    check_mac_stop();
-#endif
-#ifdef ibm
-    check_ibm_stop();
-#endif
 #ifdef HAVE_WX
     check_wx_stop(0, 0);
 #endif
@@ -735,7 +729,7 @@ lambda_apply:
     	 formals != NIL;
 	 formals = cdr(formals)) {
 	    parm = car(formals);
-	    if (nodetype(parm) == INT) break;	/* default # args */
+	    if (nodetype(parm) == INTT) break;	/* default # args */
 	    if (argl != NIL) {
 		arg = car(argl);
 		if (tracing) {
@@ -1308,12 +1302,6 @@ repeat_followup:
     }
     if (repcount > 0)    /* negative means forever */
 	--repcount;
-#ifdef mac
-    check_mac_stop();
-#endif
-#ifdef ibm
-    check_ibm_stop();
-#endif
     if (RUNNING) goto repeat_again;
     val = UNBOUND;
     goto repeat_done;

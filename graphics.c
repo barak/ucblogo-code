@@ -34,17 +34,10 @@
 
 #ifdef HAVE_WX
 #include "wxGraphics.h"
-#elif defined(mac)
-#include "macterm.h"
 #elif defined(WIN32)
 #include "win32trm.h"
-#elif defined(__RZTC__)
-#include <fg.h>
-#include "ztcterm.h"
 #elif defined(x_window)
 #include "xgraphics.h"
-#elif defined(ibm)
-#include "ibmterm.h"
 #else
 #include "nographics.h"
 #endif /* end this whole big huge tree */
@@ -58,11 +51,7 @@ int turtlePosition_y=0;
 extern void wx_adjust_label_height();
 #endif
 
-#if defined(__RZTC__) && !defined(WIN32) /* sowings */
-#define total_turtle_bottom_max (-(MaxY/2))
-#else
 #define total_turtle_bottom_max turtle_bottom_max
-#endif
 
 /* types of graphics moves that can be recorded */
 #define FINISHED       0    /* must be zero */
@@ -81,9 +70,6 @@ extern void wx_adjust_label_height();
 #define STARTFILL     13
 #define ENDFILL	      14
 #define COLORFILL     15
-
-/* NOTE: See the files (macterm.c and macterm.h) or (ibmterm.c and ibmterm.h)
-   for examples of the functions and macros that this file assumes exist. */
 
 #define One (sizeof(void *))
 #define Two (2*One)
@@ -312,7 +298,7 @@ NODE *lright(NODE *arg) {
     
     val = numeric_arg(arg);
     if (NOT_THROWING) {
-	if (nodetype(val) == INT)
+	if (nodetype(val) == INTT)
 	    a = (FLONUM)getint(val);
 	else
 	    a = getfloat(val);
@@ -327,7 +313,7 @@ NODE *lleft(NODE *arg) {
     
     val = numeric_arg(arg);
     if (NOT_THROWING) {
-	if (nodetype(val) == INT)
+	if (nodetype(val) == INTT)
 	    a = (FLONUM)getint(val);
 	else
 	    a = getfloat(val);
@@ -551,7 +537,7 @@ FLONUM get_number(NODE *arg) {
     NODE *val = numeric_arg(arg);
 
     if (NOT_THROWING) {
-	if (nodetype(val) == INT)
+	if (nodetype(val) == INTT)
 	    return (FLONUM)getint(val);
 	else
 	    return getfloat(val);
@@ -627,7 +613,7 @@ NODE *lsetheading(NODE *arg) {
     if (NOT_THROWING) {
 	prepare_to_draw;
 	draw_turtle();
-	if (nodetype(val) == INT)
+	if (nodetype(val) == INTT)
 	    turtle_heading = (FLONUM)getint(val);
 	else
 	    turtle_heading = getfloat(val);
@@ -654,9 +640,9 @@ NODE *vec_arg_helper(NODE *args, BOOLEAN floatok, BOOLEAN three) {
 	    val2 = cnv_node_to_numnode(cadr(arg));
 		if (three) val3 = cnv_node_to_numnode(car(cddr(arg)));
 	    if (val1 != UNBOUND && val2 != UNBOUND &&
-		(floatok || (nodetype(val1) == INT && getint(val1) >= 0 &&
-			     nodetype(val2) == INT && getint(val2) >= 0 &&
-				 (!three || (nodetype(val3) == INT && getint(val3) >= 0))))) {
+		(floatok || (nodetype(val1) == INTT && getint(val1) >= 0 &&
+			     nodetype(val2) == INTT && getint(val2) >= 0 &&
+				 (!three || (nodetype(val3) == INTT && getint(val3) >= 0))))) {
 		setcar(arg, val1);
 		setcar(cdr(arg), val2);
 		if (three) setcar (cddr(arg), val3);
@@ -975,9 +961,6 @@ NODE *llabel(NODE *arg) {
 	prepare_to_draw;
 	draw_turtle();
 	theLength = strlen(textbuf);
-#ifdef mac
-	c_to_pascal_string(textbuf, theLength);
-#endif
 	label(textbuf);
 	save_string(textbuf,theLength);
 	draw_turtle();
@@ -1267,20 +1250,6 @@ NODE *lsetscrunch(NODE *args) {
 			       (FLONUM)getint(ynode);
 	draw_turtle();
 	done_drawing;
-#ifdef __RZTC__
-	{
-	    FILE *fp = fopen("scrunch.dat","r");
-	    if (fp != NULL) {
-		fclose(fp);
-		fp = fopen("scrunch.dat","w");
-		if (fp != NULL) {
-		    fwrite(&x_scale, sizeof(FLONUM), 1, fp);
-		    fwrite(&y_scale, sizeof(FLONUM), 1, fp);
-		    fclose(fp);
-		}
-	    }
-	}
-#endif
 #ifdef HAVE_WX
 	//update the label height!
 
@@ -1406,12 +1375,12 @@ NODE *larc(NODE *arg) {
 
     if (NOT_THROWING) {
 
-	if (nodetype(val1) == INT)
+	if (nodetype(val1) == INTT)
 	    angle = (FLONUM)getint(val1);
 	else
 	    angle = getfloat(val1);
 
-	if (nodetype(val2) == INT)
+	if (nodetype(val2) == INTT)
 	    radius = (FLONUM)getint(val2);
 	else
 	    radius = getfloat(val2);
@@ -1841,9 +1810,6 @@ void redraw_graphics(void) {
     int lastx, lasty;
     pen_info saved_pen;
     BOOLEAN saved_shown;
-#if defined(__RZTC__) && !defined(WIN32)
-    BOOLEAN save_splitscreen = in_splitscreen;
-#endif
 #ifdef HAVE_WX
     char *start, *ptr;
     int start_idx, idx, count, color;
@@ -1870,10 +1836,6 @@ void redraw_graphics(void) {
     save_pen(&saved_pen);
     restore_pen(&orig_pen);
 	
-#if defined(__RZTC__) && !defined(WIN32)
-    full_screen;
-#endif
-
     erase_screen();
     wanna_x = wanna_y = turtle_x = turtle_y = turtle_heading = 0.0;
     out_of_bounds = FALSE;
@@ -1883,10 +1845,6 @@ void redraw_graphics(void) {
     set_pen_color((FIXNUM)7);
     set_pen_width(1);
     set_pen_height(1);
-
-#ifdef __TURBOC__
-    moveto(p_info_x(orig_pen),p_info_y(orig_pen));
-#endif
 
     lastx = lasty = 0;
 
@@ -2018,10 +1976,6 @@ void redraw_graphics(void) {
     restore_pen(&saved_pen);
     turtle_shown = saved_shown;
 
-#if defined(__RZTC__) && !defined(WIN32)
-    if (save_splitscreen) {split_screen;}
-#endif
-
     turtle_x = save_tx;
     turtle_y = save_ty;
     turtle_heading = save_th;
@@ -2037,7 +1991,7 @@ NODE *lsavepict(NODE *args) {
     char *p;
     char *buf = record_buffer;
 	
-#if defined(WIN32)||defined(ibm)
+#if defined(WIN32)
 	extern NODE *lopen(NODE *, char *);
 	lopen(args,"wb");
 #else
@@ -2092,7 +2046,7 @@ NODE *lloadpict(NODE *args) {
     size_t records_read;
     int palette_read_status;
 
-#if defined(WIN32)||defined(ibm)
+#if defined(WIN32)
 	extern NODE *lopen(NODE *, char *);
 	lopen(args,"rb");
 #else
@@ -2211,21 +2165,12 @@ void rgbprint(FILE *fp, int cnum) {
 		((double)g)/65535, ((double)b)/65535);
 }
 
-#ifdef mac
-extern void fixMacType(NODE *args);
-#endif
-
 NODE *lepspict(NODE *args) {
     FILE *fp;
     int r_index = One, act=0, lastx = 0, lasty = 0, vis = 0;
     char *bufp = record_buffer;
 
-#ifdef mac
-    fixMacType(args);
-    lopenappend(args);
-#else
     lopenwrite(args);
-#endif
     if (NOT_THROWING) {
 	fp = (FILE *)file_list->n_obj;
 

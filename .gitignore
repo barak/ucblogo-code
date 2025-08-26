@@ -1,3 +1,4 @@
+*~
 *.o
 .deps/
 /aclocal.m4
@@ -26,3 +27,9 @@
 /ucblogo
 Makefile
 Makefile.in
+*.i
+*.ii
+*.s
+*.exe
+git.c
+logo_win.res

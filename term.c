@@ -29,10 +29,6 @@
 #include <unistd.h>
 #endif
 
-#ifdef mac
-#include <console.h>
-#endif
-
 #ifdef HAVE_TERMIO_H
 #ifdef HAVE_WX
 #include <termios.h>
@@ -127,15 +123,6 @@ void term_init(void) {
     interactive = isatty(0);
 #endif
 
-#ifdef mac
-    term_init_mac();
-    return;
-#else
-#ifdef ibm
-#ifndef WIN32
-    term_init_ibm();
-#endif /* WIN32 */
-#else
     if (interactive) {
 #ifdef HAVE_TERMIO_H
 	ioctl(0,TCGETA,(char *)(&tty_cooked));
@@ -192,9 +179,6 @@ void term_init(void) {
     /* if we still don't know our size, set some defaults */
     if (x_max <= 0) x_max = 80;
     if (y_max <= 0) y_max = 24;
-
-#endif
-#endif
 }
 
 void charmode_on() {
@@ -230,22 +214,8 @@ void charmode_off() {
 }
 
 NODE *lcleartext(NODE *args) {
-#ifdef mac
-    cgotoxy(x_margin + 1, y_margin + 1, stdout);
-    ccleos(stdout);
-#else
-#ifdef ibm
-#ifndef WIN32 /* sowings */
-    ibm_clear_text();
-    ibm_gotoxy(x_margin, y_margin);
-#else /* WIN32 */
-    win32_clear_text();
-#endif /* WIN32 || !Win32 */
-#else /* !ibm */
     printf("%s", cl_arr);
     printf("%s", tgoto(cm_arr, x_margin, y_margin));
-#endif /* ibm */
-#endif /* mac */
 
 #ifdef WIN32
 	win32_update_text();
@@ -253,9 +223,6 @@ NODE *lcleartext(NODE *args) {
 	fflush(stdout); /* do it now! */
 #endif
 	fix_turtle_shownness();
-#if defined(__RZTC__)
-	zflush();
-#endif
 
     x_coord = x_margin;
     y_coord = y_margin;
@@ -266,9 +233,6 @@ NODE *lcursor(NODE *args) {
 
     // Flush buffer so it doesn't impact cursor position.
     fflush(stdout);
-#ifdef __RZTC__
-    zflush();
-#endif
 
     return(cons(make_intnode((FIXNUM)(x_coord-x_margin)),
 		cons(make_intnode((FIXNUM)(y_coord-y_margin)), NIL)));
@@ -295,19 +259,8 @@ NODE *lsetcursor(NODE *args) {
 	}
     }
     if (NOT_THROWING) {
-#ifdef mac
-	mac_gotoxy(x_coord, y_coord);
-#else
-#ifdef ibm
-	ibm_gotoxy(x_coord, y_coord);
-#else
 	printf("%s", tgoto(cm_arr, x_coord, y_coord));
-#endif
-#endif
 	fflush(stdout);
-#ifdef __RZTC__
-	zflush();
-#endif
     }
     return(UNBOUND);
 #endif /* !win32 (for non-windows version of this code) */

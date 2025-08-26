@@ -42,12 +42,6 @@
 #endif
 #endif
 
-#ifdef __RZTC__
-#include <signal.h>
-#define SIGQUIT SIGTERM
-#include <controlc.h>
-#endif
-
 #ifndef TIOCSTI
 #include <setjmp.h>
 jmp_buf iblk_buf;
@@ -55,10 +49,6 @@ jmp_buf iblk_buf;
  
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
-#endif
-
-#ifdef mac
-#include <console.h>
 #endif
 
 NODE *current_line = NIL;
@@ -70,10 +60,6 @@ int stop_quietly_flag=0;
 void unblock_input(void) {
     if (input_blocking) {
 	input_blocking = 0;
-#ifdef mac
-	csetmode(C_ECHO, stdin);
-	fflush(stdin);
-#endif
 #ifdef TIOCSTI
 	ioctl(0,TIOCSTI,"\n");
 #else
@@ -100,9 +86,6 @@ void logo_stop()
         if (!stop_quietly_flag)
             err_logo(STOP_ERROR,NIL);
         stop_quietly_flag = 0;
-#ifdef __RZTC__
-	if (!input_blocking)
-#endif
 	  signal(SIGINT, logo_stop);
 	unblock_input();
     }
@@ -124,9 +107,7 @@ void logo_pause()
 #ifdef HAVE_SIGSETMASK
 	sigsetmask(0);
 #else
-#if !defined(mac) && !defined(_MSC_VER)
 	signal(SIGQUIT, logo_pause);
-#endif
 #endif
 	lpause(NIL);
     }
@@ -212,12 +193,6 @@ void delayed_int() {
 #endif
 }
 
-#if defined(__RZTC__) && !defined(WIN32) /* sowings */
-void _far _cdecl do_ctrl_c(void) {
-    ctrl_c_count++;
-}
-#endif
-
 #ifdef HAVE_WX
 extern char * wx_get_original_dir_name(void);
 extern char * wx_get_current_dir_name(void);
@@ -233,16 +208,6 @@ int main(int argc, char *argv[]) {
     int argc2;
     char **argv2;
 
-#ifdef SYMANTEC_C
-    extern void (*openproc)(void);
-    extern void __open_std(void);
-    openproc = &__open_std;
-#endif
-
-#ifdef mac
-    init_mac_memory();
-#endif
-
     bottom_stack = &exec_list; /*GC*/
 
 #ifndef HAVE_WX
@@ -256,21 +221,7 @@ int main(int argc, char *argv[]) {
 
     math_init();
 
-#ifdef ibm
-    signal(SIGINT, SIG_IGN);
-#if defined(__RZTC__) && !defined(WIN32) /* sowings */
-    _controlc_handler = do_ctrl_c;
-    controlc_open();
-#endif
-#else /* !ibm */
     signal(SIGINT, logo_stop);
-#endif /* ibm */
-#ifdef mac
-    signal(SIGQUIT, SIG_IGN);
-#else /* !mac */
-	//signal(SIGQUIT, logo_pause);
-#endif
-    /* SIGQUITs never happen on the IBM */
 
     if (argc < 2) {
 #ifndef WIN32
@@ -341,20 +292,11 @@ int main(int argc, char *argv[]) {
 	if (NOT_THROWING) {
 	    check_reserve_tank();
 	    current_line = reader(stdin,"? ");
-#ifdef __RZTC__
-		(void)feof(stdin);
-		if (!in_graphics_mode)
-		    printf(" \b");
-		fflush(stdout);
-#endif
 
 #ifndef WIN32
 	    if (feof(stdin) && !isatty(0)) lbye(NIL);
 #endif
 
-#ifdef __RZTC__
-	    if (feof(stdin)) clearerr(stdin);
-#endif
 	    if (NOT_THROWING) {
 		exec_list = parser(current_line, TRUE);
 		if (exec_list != NIL) eval_driver(exec_list);

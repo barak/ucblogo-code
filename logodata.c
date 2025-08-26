@@ -26,11 +26,6 @@
 #include "logo.h"
 #include "globals.h"
 #include <stdarg.h>
-#ifdef ibm
-#if !defined(__RZTC__) && !defined(_MSC_VER)
-#include <alloc.h>
-#endif
-#endif
 
 char special_chars[] = " \t\n(?????+++~)[]-*/=<>\"\\:;|{}";
 
@@ -349,7 +344,7 @@ NODE *make_colon(NODE *cnd) {
 }
 
 NODE *make_intnode(FIXNUM i) {
-    NODE *nd = newnode(INT);
+    NODE *nd = newnode(INTT);
 
     setint(nd, i);
     return(nd);
@@ -382,7 +377,7 @@ NODE *cnv_node_to_numnode(NODE *ndi) {
 	    val = newnode(FLOATT);
 	    setfloat(val, atof(s));
 	} else {
-	    val = newnode(INT);
+	    val = newnode(INTT);
 	    setint(val, atol(s));
 	}
 	return(val);
@@ -414,7 +409,7 @@ NODE *cnv_node_to_strnode(NODE *nd) {
 	    nd = make_strnode(getstrptr(nd), (struct string_block *)NULL,
 			      getstrlen(nd) + 1, nodetype(nd), colon_strnzcpy);
 	    return(nd);
-	case INT:
+	case INTT:
 	    sprintf(s, "%ld", getint(nd));
 	    return(make_strnode(s, (struct string_block *)NULL,
 				(int)strlen(s), STRING, strnzcpy));
