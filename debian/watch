@@ -1,2 +1,4 @@
-version=4
-https://github.com/jrincayc/@PACKAGE@-code/tags .*/version_([0-9.]+)@ARCHIVE_EXT@
+Version: 5
+
+Source: https://github.com/jrincayc/@PACKAGE@-code/tags
+Matching-Pattern: .*/version_@SEMANTIC_VERSION@@ARCHIVE_EXT@
